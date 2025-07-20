@@ -1,3 +1,4 @@
+// --- CustomAppBar.dart ---
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -44,7 +45,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
         }
       },
       onError: (error) {
-        debugPrint("Speech recognition error: $error");
+        debugPrint("Speech recognition error: \$error");
         setState(() => _isListening = false);
       },
     );
@@ -95,7 +96,6 @@ class _CustomAppBarState extends State<CustomAppBar> {
             padding: const EdgeInsets.only(top: 4),
             child: Row(
               children: [
-                // Arabic Title
                 Expanded(
                   flex: 4,
                   child: Text(
@@ -107,8 +107,6 @@ class _CustomAppBarState extends State<CustomAppBar> {
                     ),
                   ),
                 ),
-
-                // Search Field
                 Expanded(
                   flex: 6,
                   child: Container(
