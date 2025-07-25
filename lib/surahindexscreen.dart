@@ -244,6 +244,7 @@ Container(
                         viewportFraction: 0.4,
                       ),
                       items: [
+                        _buildCarouselItem(icon: Icons.book, label: 'qibla', targetPage: const QiblaPage()),
                         _buildCarouselItem(icon: Icons.book, label: 'Hadith', targetPage: const HadithPage()),
                         _buildCarouselItem(icon: Icons.schedule, label: 'Prayer Time', targetPage: const PrayerTimePage()),
                         _buildCarouselItem(icon: Icons.brightness_low, label: 'Tasbeeh', targetPage: const TasbeehPage()),

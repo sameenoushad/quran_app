@@ -1,128 +1,131 @@
-// import 'dart:async';
-// import 'dart:math' show pi;
+import 'dart:async';
+import 'dart:math';
 
-// import 'package:flutter/material.dart';
-// import 'package:flutter_qiblah/flutter_qiblah.dart';
-// import 'package:geolocator/geolocator.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-// class QiblaPage extends StatefulWidget {
-//   const QiblaPage({super.key});
+class QiblaPage extends StatefulWidget {
+  const QiblaPage({Key? key}) : super(key: key);
 
-//   @override
-//   State<QiblaPage> createState() => _QiblaPageState();
-// }
+  @override
+  State<QiblaPage> createState() => _QiblaPageState();
+}
 
-// class _QiblaPageState extends State<QiblaPage> {
-//   bool _locationPermissionGranted = false;
-//   Stream<QiblahDirection>? _qiblahStream;
-//   late GoogleMapController _mapController;
-//   Position? _currentPosition;
+class _QiblaPageState extends State<QiblaPage> {
+  double? _direction;
+  Position? _currentPosition;
 
-//   final LatLng kaabaLatLng = const LatLng(21.4225, 39.8262);
+  @override
+  void initState() {
+    super.initState();
+    _getLocation();
+    FlutterCompass.events?.listen((event) {
+      setState(() {
+        _direction = event.heading;
+      });
+    });
+  }
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     _checkPermissions();
-//   }
+  Future<void> _getLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+      return;
+    }
 
-//   Future<void> _checkPermissions() async {
-//     final status = await Permission.location.request();
-//     if (status.isGranted) {
-//       final position = await Geolocator.getCurrentPosition();
-//       setState(() {
-//         _locationPermissionGranted = true;
-//         _currentPosition = position;
-//         _qiblahStream = FlutterQiblah.qiblahStream;
-//       });
-//     }
-//   }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+      if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) {
+        return;
+      }
+    }
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: const Text("🧭 Qibla Direction")),
-//       body: !_locationPermissionGranted
-//           ? const Center(child: Text("Location permission is required."))
-//           : _currentPosition == null
-//               ? const Center(child: CircularProgressIndicator())
-//               : Column(
-//                   children: [
-//                     // Compass Section
-//                     Expanded(
-//                       flex: 1,
-//                       child: StreamBuilder<QiblahDirection>(
-//                         stream: _qiblahStream,
-//                         builder: (_, snapshot) {
-//                           if (!snapshot.hasData) {
-//                             return const Center(child: CircularProgressIndicator());
-//                           }
+    final position = await Geolocator.getCurrentPosition();
+    setState(() {
+      _currentPosition = position;
+    });
+  }
 
-//                           final direction = snapshot.data!.qiblah;
+  double _calculateQiblaDirection(double lat, double lon) {
+    const double kaabaLat = 21.4225;
+    const double kaabaLon = 39.8262;
 
-//                           return Stack(
-//                             alignment: Alignment.center,
-//                             children: [
-//                               Image.asset('assets/images/compass.png', width: 200),
-//                               Transform.rotate(
-//                                 angle: (direction) * (pi / 180),
-//                                 child:
-//                                     Image.asset('assets/images/needle.png', width: 150),
-//                               ),
-//                               const Positioned(
-//                                 bottom: 10,
-//                                 child: Text("Align the needle to find Qibla",
-//                                     style: TextStyle(fontSize: 14)),
-//                               )
-//                             ],
-//                           );
-//                         },
-//                       ),
-//                     ),
+    final double latRad = lat * pi / 180;
+    final double lonRad = lon * pi / 180;
+    final double kaabaLatRad = kaabaLat * pi / 180;
+    final double kaabaLonRad = kaabaLon * pi / 180;
 
-//                     const SizedBox(height: 10),
+    final double deltaLon = kaabaLonRad - lonRad;
+    final double x = sin(deltaLon);
+    final double y = cos(latRad) * tan(kaabaLatRad) - sin(latRad) * cos(deltaLon);
 
-//                     // Google Map Section
-//                     Expanded(
-//                       flex: 1,
-//                       child: GoogleMap(
-//                         onMapCreated: (controller) => _mapController = controller,
-//                         initialCameraPosition: CameraPosition(
-//                           target: LatLng(_currentPosition!.latitude,
-//                               _currentPosition!.longitude),
-//                           zoom: 14,
-//                         ),
-//                         markers: {
-//                           Marker(
-//                               markerId: const MarkerId('user'),
-//                               position: LatLng(_currentPosition!.latitude,
-//                                   _currentPosition!.longitude),
-//                               infoWindow: const InfoWindow(title: "You")),
-//                           Marker(
-//                               markerId: const MarkerId('kaaba'),
-//                               position: kaabaLatLng,
-//                               icon: BitmapDescriptor.defaultMarkerWithHue(
-//                                   BitmapDescriptor.hueOrange),
-//                               infoWindow: const InfoWindow(title: "Kaaba")),
-//                         },
-//                         polylines: {
-//                           Polyline(
-//                             polylineId: const PolylineId('qibla_line'),
-//                             color: Colors.teal,
-//                             width: 3,
-//                             points: [
-//                               LatLng(_currentPosition!.latitude,
-//                                   _currentPosition!.longitude),
-//                               kaabaLatLng,
-//                             ],
-//                           )
-//                         },
-//                       ),
-//                     )
-//                   ],
-//                 ),
-//     );
-//   }
-// }
+    final double bearing = atan2(x, y);
+    return (bearing * 180 / pi + 360) % 360;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    if (_currentPosition == null || _direction == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final qiblaDirection = _calculateQiblaDirection(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+    );
+
+    final difference = qiblaDirection - _direction!;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Qibla Direction",
+          style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.teal,
+      ),
+      body: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Image.asset(
+              'assets/images/compass.png',
+              width: size.width * 0.7,
+              height: size.width * 0.7,
+            ),
+            Transform.rotate(
+              angle: difference * (pi / 180),
+              child: Image.asset(
+                'assets/images/qibla-arrow.png',
+                width: size.width * 0.4,
+                height: size.width * 0.4,
+              ),
+            ),
+            Positioned(
+              bottom: 50,
+              child: Column(
+                children: [
+                  Text(
+                    'Qibla is at ${qiblaDirection.toStringAsFixed(2)}°',
+                    style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Your heading: ${_direction!.toStringAsFixed(2)}°',
+                    style: GoogleFonts.nunito(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
